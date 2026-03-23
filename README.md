@@ -50,12 +50,6 @@ Scalable recommendation system prototype using **Deep Learning (Retrieval)** and
 * **Features:** `item_popularity`, `item_avg_rating`.
 * **Model:** `LGBMClassifier` (50 estimators).
 
-___
-
-Отличный выбор названия. Для стажерской позиции использование **uv** — это огромный плюс, так как это современный стандарт в индустрии, который показывает, что вы следите за актуальными инструментами (он работает в разы быстрее pip).
-
-Вот лаконичный раздел для вашего `README.md`, который объясняет, как запустить проект:
-
 ---
 
 ## Getting Started
