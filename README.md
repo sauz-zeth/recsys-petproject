@@ -65,7 +65,7 @@ pip install uv
 ### Installation
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/recsys-petproject.git
+   git clone https://github.com/sauz-zeth/recsys-petproject.git
    cd recsys-petproject
    ```
 
