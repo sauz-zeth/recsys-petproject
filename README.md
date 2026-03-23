@@ -49,3 +49,42 @@ Scalable recommendation system prototype using **Deep Learning (Retrieval)** and
 * **Dataset:** 2,000 positive + 2,000 random negative samples.
 * **Features:** `item_popularity`, `item_avg_rating`.
 * **Model:** `LGBMClassifier` (50 estimators).
+
+___
+
+Отличный выбор названия. Для стажерской позиции использование **uv** — это огромный плюс, так как это современный стандарт в индустрии, который показывает, что вы следите за актуальными инструментами (он работает в разы быстрее pip).
+
+Вот лаконичный раздел для вашего `README.md`, который объясняет, как запустить проект:
+
+---
+
+## Getting Started
+
+This project uses [uv](https://docs.astral.sh/uv/) for fast and reliable dependency management.
+
+### Prerequisites
+Make sure you have `uv` installed:
+```bash
+pip install uv
+```
+
+### Installation
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/your-username/recsys-petproject.git
+   cd recsys-petproject
+   ```
+
+2. **Sync dependencies:**
+   This command will automatically create a virtual environment and install all required packages from `pyproject.toml`:
+   ```bash
+   uv sync
+   ```
+
+### Running the Project
+To run the main training script:
+
+  ```bash
+  uv run main.py
+  ```
+___
