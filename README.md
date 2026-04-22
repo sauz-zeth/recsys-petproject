@@ -1,84 +1,78 @@
-## Generative Retrieval & Two-Stage Ranking (MovieLens 100k)
+## Two-Stage Recommendation System (MovieLens 100k)
 
-Scalable recommendation system prototype using **Deep Learning (Retrieval)** and **GBDT (Ranking)** with semantic quantization for optimized inference.
-
----
-
-### System Architecture
-
-#### 1. Semantic Quantization
-* **Item Embeddings:** Generated via **Word2Vec (Skip-gram)** on user session sequences.
-* **Codebook:** **K-Means** clustering of embeddings; centroids represent "semantic units" (similar item groups).
-* **Indexing:** Each item is assigned a `semantic_id` to map the catalog into a discrete latent space.
-
-#### 2. Stage 1: Generative Retrieval (PyTorch)
-* **Model:** Autoregressive **GRU-based RNN**.
-* **Task:** Predicts the next `semantic_id` based on session history.
-* **Function:** Reduces search space while maintaining session context by operating on interest categories.
-
-#### 3. Stage 2: Reranking (LightGBM)
-* **Model:** **LGBMClassifier**.
-* **Features:** Item popularity, average ratings, and static metadata.
-* **Function:** Refines the RNN-generated top candidates using tabular business metrics.
+End-to-end recommendation pipeline combining semantic quantization, deep learning retrieval, and GBDT reranking — built to understand how production RecSys architectures work at each stage.
 
 ---
 
-### Validation & Results
-**Temporal Split** evaluation (last user action held out for testing).
+### Architecture
 
-| Metric | Value | Note |
-| :--- | :--- | :--- |
-| **Recall@10** | **0.1000** | Probability of target in top-10 |
-| **MRR** | **0.0365** | Mean Reciprocal Rank |
-| **NDCG@10** | **0.0508** | Position-weighted relevance |
+```
+User Session History
+       │
+       ▼
+┌─────────────────────────┐
+│   Semantic Quantization │   Word2Vec (Skip-gram) → K-Means
+│   1,682 items → 128 IDs │  ~13 items per cluster
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│  Stage 1: GRU Retrieval │  Predicts top-10 semantic IDs
+│  (PyTorch)              │  → ~200 candidate items
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│  Stage 2: LightGBM      │  Scores each candidate:
+│  Reranking              │  LightGBM(popularity, avg_rating)
+│                         │  × GRU cluster probability
+└────────────┬────────────┘
+             │
+             ▼
+        Top-10 Recommendations
+```
 
-*Performance is 16x higher than the Random Baseline ($\approx 0.006$).*
+**Semantic quantization** compresses the item catalog ~13× before passing it to the neural network. The GRU operates on 128 semantic IDs instead of 1,682 raw items, reducing inference-time search space. At ranking, the two signals are multiplied: LightGBM captures global item quality, GRU provides session-based personalization.
+
+---
+
+### Results
+
+Evaluated on 943 users, **temporal split** (last interaction held out per user).
+
+| Model | Recall@10 | MRR | NDCG@10 |
+| :--- | :---: | :---: | :---: |
+| Popularity Baseline | 0.0838 | 0.0314 | 0.0436 |
+| **Two-Stage (ours)** | **0.1060** | **0.0351** | **0.0514** |
+| **vs Baseline** | **+26.6%** | **+11.7%** | **+17.9%** |
 
 ---
 
 ### Hyperparameters
 
-**Stage 1: VQ & RNN**
-* **Inventory:** ~1,600 items.
-* **Codebook Size ($K$):** 64 clusters (~25x space compression).
-* **Embeddings:** dim=32, window=10.
-* **Sequence:** 5 (4 context + 1 target).
-* **Architecture:** 1-layer GRU, hidden=64, 3 epochs.
-
-**Stage 2: LightGBM**
-* **Dataset:** 2,000 positive + 2,000 random negative samples.
-* **Features:** `item_popularity`, `item_avg_rating`.
-* **Model:** `LGBMClassifier` (50 estimators).
+| Component | Parameter | Value |
+| :--- | :--- | :--- |
+| Word2Vec | architecture | Skip-gram, dim=64, window=10 |
+| K-Means | codebook size *K* | 128 clusters |
+| GRU | hidden / embed dim | 128 / 64 |
+| GRU | training | 7 epochs, Adam lr=0.001, batch=256 |
+| LightGBM | estimators | 50, trained on 2k pos + 2k neg |
 
 ---
 
-## Getting Started
+### Getting Started
 
-This project uses [uv](https://docs.astral.sh/uv/) for fast and reliable dependency management.
+Requires [uv](https://docs.astral.sh/uv/):
 
-### Prerequisites
-Make sure you have `uv` installed:
 ```bash
 pip install uv
 ```
 
-### Installation
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/sauz-zeth/recsys-petproject.git
-   cd recsys-petproject
-   ```
+```bash
+git clone https://github.com/sauz-zeth/recsys-petproject.git
+cd recsys-petproject
+uv sync
+uv run main.py
+```
 
-2. **Sync dependencies:**
-   This command will automatically create a virtual environment and install all required packages from `pyproject.toml`:
-   ```bash
-   uv sync
-   ```
-
-### Running the Project
-To run the main training script:
-
-  ```bash
-  uv run main.py
-  ```
-___
+The MovieLens 100k dataset is downloaded automatically on first run.

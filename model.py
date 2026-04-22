@@ -49,6 +49,50 @@ class GenerativeRecommender(nn.Module):
         logits = self.fc(last_hidden)
         return logits
 
+class SASRec(nn.Module):
+    """Self-Attentive Sequential Recommendation (Kang & McAuley, 2018).
+
+    Заменяет GRU на стек трансформер-блоков с казуальной маской.
+    Каждый токен может смотреть только на предыдущие позиции,
+    что соответствует задаче предсказания следующего айтема.
+    """
+
+    def __init__(
+        self,
+        vocab_size: int,
+        hidden_dim: int = 64,
+        num_heads: int = 2,
+        num_blocks: int = 2,
+        max_seq_len: int = 4,
+        dropout: float = 0.2,
+    ):
+        super().__init__()
+        self.item_emb = nn.Embedding(vocab_size, hidden_dim)
+        self.pos_emb = nn.Embedding(max_seq_len, hidden_dim)
+        self.dropout = nn.Dropout(dropout)
+
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=hidden_dim,
+            nhead=num_heads,
+            dim_feedforward=hidden_dim * 4,
+            dropout=dropout,
+            batch_first=True,
+            norm_first=True,   # Pre-LN — стабильнее при малых данных
+        )
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_blocks, enable_nested_tensor=False)
+        self.norm = nn.LayerNorm(hidden_dim)
+        self.fc = nn.Linear(hidden_dim, vocab_size)
+
+    def forward(self, x):
+        # x: [batch_size, seq_len]
+        seq_len = x.size(1)
+        positions = torch.arange(seq_len, device=x.device).unsqueeze(0)
+        h = self.dropout(self.item_emb(x) + self.pos_emb(positions))
+        causal_mask = nn.Transformer.generate_square_subsequent_mask(seq_len, device=x.device)
+        h = self.transformer(h, mask=causal_mask, is_causal=True)
+        return self.fc(self.norm(h[:, -1, :]))
+
+
 def train_model(model, dataloader, epochs=5, lr=0.001):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
